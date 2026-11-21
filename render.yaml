@@ -8,5 +8,11 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
       - key: LOKY_MAX_CPU_COUNT
-        value: "2"
+        value: "1"

@@ -5,10 +5,17 @@ Serves REST API endpoints under /api/* and the interactive frontend SPA at /.
 
 import io
 import os
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+os.environ.setdefault("LOKY_MAX_CPU_COUNT", "1")
 import sys
 import math
 import wave
 import tempfile
+import threading
 import subprocess
 import numpy as np
 import pandas as pd
@@ -54,9 +61,24 @@ if not os.path.exists(DATASET_PATH):
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
 CORS(app)
 
-print("Initializing Student Feedback NLP Engine (Emotion + Topic Models)...")
-nlp_engine = StudentFeedbackNLPEngine(DATASET_PATH)
-print("NLP Engine ready!")
+_nlp_engine = None
+_engine_lock = threading.Lock()
+
+
+def get_engine() -> StudentFeedbackNLPEngine:
+    """Thread-safe singleton getter so Gunicorn binds $PORT immediately before model training completes."""
+    global _nlp_engine
+    if _nlp_engine is None:
+        with _engine_lock:
+            if _nlp_engine is None:
+                print("Initializing Student Feedback NLP Engine (Emotion + Topic Models)...")
+                _nlp_engine = StudentFeedbackNLPEngine(DATASET_PATH)
+                print("NLP Engine ready!")
+    return _nlp_engine
+
+
+# Warm up the NLP engine in a background daemon thread so Gunicorn binds 0.0.0.0:$PORT in <1 second on Render
+threading.Thread(target=get_engine, daemon=True).start()
 
 
 @app.route("/")
@@ -66,44 +88,49 @@ def serve_index():
 
 @app.route("/api/health", methods=["GET"])
 def health_check():
+    eng = get_engine()
     return jsonify({
         "status": "ok",
-        "dataset_records": len(nlp_engine.df),
-        "emotions": nlp_engine.emotions,
-        "topics": nlp_engine.topics,
+        "dataset_records": len(eng.df),
+        "emotions": eng.emotions,
+        "topics": eng.topics,
     })
 
 
 @app.route("/api/dashboard", methods=["GET"])
 def get_dashboard():
+    eng = get_engine()
     course_filter = request.args.get("course", "ALL")
-    data = nlp_engine.get_dashboard_analytics(course_filter=course_filter)
+    data = eng.get_dashboard_analytics(course_filter=course_filter)
     return jsonify(data)
 
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze_feedback():
+    eng = get_engine()
     payload = request.get_json(silent=True) or {}
     text = payload.get("text", "").strip()
     if not text:
         return jsonify({"error": "Please provide non-empty student feedback text."}), 400
-    result = nlp_engine.analyze_single_feedback(text)
+    result = eng.analyze_single_feedback(text)
     return jsonify(result)
 
 
 @app.route("/api/topics", methods=["GET"])
 def get_topics_comparison():
+    eng = get_engine()
     return jsonify({
-        "topic_models": nlp_engine.topic_comparison_data,
-        "document_clusters_2d": nlp_engine.document_embeddings_2d,
-        "topics_list": nlp_engine.topics,
-        "emotions_list": nlp_engine.emotions,
+        "topic_models": eng.topic_comparison_data,
+        "document_clusters_2d": eng.document_embeddings_2d,
+        "topics_list": eng.topics,
+        "emotions_list": eng.emotions,
     })
 
 
 @app.route("/api/models", methods=["GET"])
 def get_model_benchmarks():
-    return jsonify(nlp_engine.model_metrics)
+    eng = get_engine()
+    return jsonify(eng.model_metrics)
 
 
 @app.route("/api/batch", methods=["POST"])
@@ -155,7 +182,7 @@ def analyze_batch():
     if not texts:
         return jsonify({"error": "No valid feedback texts found to analyze."}), 400
 
-    batch_result = nlp_engine.analyze_batch_texts(texts, subjects=subjects)
+    batch_result = get_engine().analyze_batch_texts(texts, subjects=subjects)
     return jsonify(batch_result)
 
 
@@ -435,7 +462,7 @@ def analyze_voice_or_file():
     acoustics["word_count"] = len(words)
 
     # Run the complete 5-stage NLP Emotion & Topic Analysis on the transcribed text
-    nlp_result = nlp_engine.analyze_single_feedback(transcript)
+    nlp_result = get_engine().analyze_single_feedback(transcript)
 
     return jsonify({
         "source_name": file_name,
