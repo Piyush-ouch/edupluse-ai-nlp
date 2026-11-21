@@ -1,0 +1,13 @@
+eval_no,batch_year,subject_title,satisfaction_stars,student_comment
+1,2026,Natural Language Processing,5,"The live demonstrations of tokenization, lemmatization, and topic modeling made every single lecture super engaging and crystal clear!"
+2,2026,Natural Language Processing,2,"The midterm question paper was too vague and the grading rubric did not explain why marks were cut on the coding section."
+3,2026,Machine Learning Foundations,1,"Three heavy programming assignments and a lab exam scheduled in the exact same week caused extreme stress and burnout."
+4,2026,Deep Learning & Neural Networks,2,"The computer lab workstations keep crashing during model training and the Wi-Fi disconnects every fifteen minutes."
+5,2026,Database Management Systems,3,"The professor jumps from advanced relational algebra proofs to SQL triggers too fast, leaving half the class confused."
+6,2026,Probability & Statistics,2,"Sitting through two hours of verbatim slide reading in a monotone voice with zero interaction is very boring and tedious."
+7,2026,Natural Language Processing,5,"Really appreciate the teaching assistants for answering our forum doubts within an hour and mentoring our capstone team!"
+8,2026,Deep Learning & Neural Networks,3,"It was a good concept and modern syllabus, but the Friday afternoon tutorial session was too long and slow."
+9,2026,Machine Learning Foundations,5,"The bi-weekly homework pacing and three flexible grace days allowed us to experiment deeply without unnecessary panic."
+10,2026,Database Management Systems,1,"My project clarification emails and forum posts have gone unanswered for two weeks and the TA missed office hours twice."
+11,2026,Probability & Statistics,4,"Thank you professor for providing detailed step-by-step solution keys and fair regrade reviews after the quiz."
+12,2026,Natural Language Processing,5,"The new pre-configured Docker containers and GPU cloud notebooks worked flawlessly for our text classification experiments!"

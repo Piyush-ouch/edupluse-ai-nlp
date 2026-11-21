@@ -1,0 +1,16 @@
+# Node modules (frontend/dist is intentionally tracked so Render Python Web Service serves the compiled React UI directly)
+frontend/node_modules/
+node_modules/
+
+# Python caches & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+*.log
