@@ -643,26 +643,27 @@ class StudentFeedbackNLPEngine:
         self.char_word_vectorizer = TfidfVectorizer(
             analyzer="char_wb",
             ngram_range=(3, 5),
-            max_features=6000,
+            max_features=3200,
             sublinear_tf=True,
         )
         X_train_sub = self.char_word_vectorizer.fit_transform(X_raw_train)
         X_test_sub = self.char_word_vectorizer.transform(X_raw_test)
 
-        n_comp = min(120, X_train_sub.shape[0] - 1, X_train_sub.shape[1] - 1)
+        n_comp = min(64, X_train_sub.shape[0] - 1, X_train_sub.shape[1] - 1)
         self.semantic_svd = make_pipeline(
-            TruncatedSVD(n_components=n_comp, random_state=42),
+            TruncatedSVD(n_components=n_comp, n_iter=3, random_state=42),
             Normalizer(copy=False),
         )
         X_train_dense = self.semantic_svd.fit_transform(X_train_sub)
         X_test_dense = self.semantic_svd.transform(X_test_sub)
 
         self.neural_mlp_model = MLPClassifier(
-            hidden_layer_sizes=(128, 64),
+            hidden_layer_sizes=(64, 32),
             activation="relu",
             solver="adam",
             alpha=0.005,
-            max_iter=350,
+            max_iter=130,
+            tol=1e-3,
             early_stopping=False,
             random_state=42,
         )
@@ -710,15 +711,10 @@ class StudentFeedbackNLPEngine:
             },
         }
 
-        # Re-fit emotion models on 100% of dataset for live production inference
-        X_all_tfidf = self.tfidf_emotion_vectorizer.fit_transform(X_text)
-        self.classical_svm_model.fit(X_all_tfidf, y_emo)
+        # Transform full dataset using the trained emotion vectorizer for topic classifier
+        X_all_tfidf = self.tfidf_emotion_vectorizer.transform(X_text)
 
-        X_all_sub = self.char_word_vectorizer.fit_transform(X_raw)
-        X_all_dense = self.semantic_svd.fit_transform(X_all_sub)
-        self.neural_mlp_model.fit(X_all_dense, y_emo)
-
-        # Also train a supervised topic reference classifier
+        # Train supervised topic reference classifier
         self.topic_classifier = CalibratedClassifierCV(
             LinearSVC(C=1.0, class_weight="balanced", random_state=42), cv=3
         )
@@ -727,7 +723,7 @@ class StudentFeedbackNLPEngine:
         # -----------------------------------------------------------------
         # E. UNSUPERVISED TOPIC MODELING (LDA vs. NMF vs. BERTopic-Style c-TF-IDF)
         # -----------------------------------------------------------------
-        self._train_topic_models(X_text, X_all_dense, y_top)
+        self._train_topic_models(X_text, None, y_top)
 
     def _compute_metrics(
         self, y_true, y_pred, classes: List[str], train_ms: float, inf_ms: float
@@ -771,7 +767,7 @@ class StudentFeedbackNLPEngine:
         X_counts = self.count_vectorizer.fit_transform(X_text)
         self.lda_model = LatentDirichletAllocation(
             n_components=n_topics,
-            max_iter=25,
+            max_iter=12,
             learning_method="batch",
             doc_topic_prior=0.15,
             topic_word_prior=0.05,
@@ -790,7 +786,7 @@ class StudentFeedbackNLPEngine:
         self.nmf_model = NMF(
             n_components=n_topics,
             init="nndsvda",
-            max_iter=400,
+            max_iter=160,
             random_state=42,
         )
         nmf_doc_topics = self.nmf_model.fit_transform(X_tfidf_top)
@@ -801,11 +797,11 @@ class StudentFeedbackNLPEngine:
         # 3. BERTopic-Style Semantic Clustering (Dense Embeddings + Cosine KMeans + Class-based TF-IDF)
         # Combine word/topic TF-IDF SVD with subword embeddings for rich semantic representation
         self.bertopic_svd = make_pipeline(
-            TruncatedSVD(n_components=32, random_state=42),
+            TruncatedSVD(n_components=32, n_iter=3, random_state=42),
             Normalizer(copy=False),
         )
         X_sem = self.bertopic_svd.fit_transform(X_tfidf_top)
-        self.bertopic_kmeans = KMeans(n_clusters=n_topics, n_init=15, random_state=42)
+        self.bertopic_kmeans = KMeans(n_clusters=n_topics, n_init=5, random_state=42)
         cluster_ids = self.bertopic_kmeans.fit_predict(X_sem)
         self.bertopic_cluster_map = self._align_clusters_to_labels(cluster_ids, y_top, n_topics)
 
