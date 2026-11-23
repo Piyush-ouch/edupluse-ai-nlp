@@ -73,6 +73,7 @@ _engine_lock = threading.Lock()
 _init_lock = threading.Lock()
 _engine_state = "idle"  # "idle" | "initializing" | "ready" | "error"
 _engine_error = None
+_init_pid = None
 
 
 def _load_or_train_engine() -> StudentFeedbackNLPEngine:
@@ -157,15 +158,21 @@ def _load_or_train_engine() -> StudentFeedbackNLPEngine:
 
 
 def start_engine_warmup(force_retry: bool = False) -> bool:
-    """Starts background NLP engine initialization once without spawning duplicate threads."""
-    global _engine_state
+    """Starts background NLP engine initialization once per worker process (fork-safe)."""
+    global _engine_state, _init_pid
+    current_pid = os.getpid()
     with _init_lock:
         if _nlp_engine is not None:
+            _engine_state = "ready"
             return False
+        # If Gunicorn forked after a previous warmup call, reset state in the new child worker
+        if _init_pid is not None and _init_pid != current_pid:
+            _engine_state = "idle"
         if _engine_state == "initializing":
             return False
         if _engine_state == "error" and not force_retry:
             return False
+        _init_pid = current_pid
         _engine_state = "initializing"
         t = threading.Thread(target=_safe_warmup_worker, daemon=True)
         t.start()
@@ -187,8 +194,11 @@ def get_engine() -> StudentFeedbackNLPEngine:
     return _load_or_train_engine()
 
 
-# Warm up the NLP engine in a single background daemon thread so Gunicorn binds $PORT immediately
-start_engine_warmup()
+@app.before_request
+def _ensure_worker_engine_warmup():
+    """Ensures warmup runs inside the active Gunicorn worker process after fork."""
+    if _nlp_engine is None and _engine_state != "error":
+        start_engine_warmup()
 
 
 @app.route("/")
