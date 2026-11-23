@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type {
   HealthResponse,
+  ReadyResponse,
   SingleAnalyzeResponse,
   DashboardResponse,
   TopicsComparisonResponse,
@@ -19,6 +20,11 @@ export const apiClient = axios.create({
 export const nlpApi = {
   async checkHealth(): Promise<HealthResponse> {
     const { data } = await apiClient.get<HealthResponse>('/api/health');
+    return data;
+  },
+
+  async checkReady(): Promise<ReadyResponse> {
+    const { data } = await apiClient.get<ReadyResponse>('/api/ready');
     return data;
   },
 

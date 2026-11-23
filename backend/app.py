@@ -15,13 +15,18 @@ import sys
 import math
 import wave
 import tempfile
+import logging
 import threading
 import subprocess
 import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
+
+logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(message)s")
+logger = logging.getLogger("edupulse")
 
 # Ensure backend directory is on sys.path for Gunicorn / Render deployment from project root
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -65,34 +70,125 @@ CORS(app)
 
 _nlp_engine = None
 _engine_lock = threading.Lock()
+_init_lock = threading.Lock()
+_engine_state = "idle"  # "idle" | "initializing" | "ready" | "error"
+_engine_error = None
+
+
+def _load_or_train_engine() -> StudentFeedbackNLPEngine:
+    """Internal helper that loads a compatible Joblib cache or trains the NLP engine cleanly."""
+    global _nlp_engine, _engine_state, _engine_error
+
+    with _engine_lock:
+        if _nlp_engine is not None:
+            _engine_state = "ready"
+            _engine_error = None
+            return _nlp_engine
+
+        _engine_state = "initializing"
+        _engine_error = None
+
+        try:
+            if os.path.exists(CACHE_PATH):
+                try:
+                    logger.info("Loading pre-trained Student Feedback NLP Engine cache from %s", CACHE_PATH)
+                    cached_obj = joblib.load(CACHE_PATH)
+
+                    # Support both new version-tagged dict and legacy StudentFeedbackNLPEngine object
+                    if isinstance(cached_obj, dict) and "engine" in cached_obj:
+                        cached_sklearn = cached_obj.get("sklearn_version")
+                        if cached_sklearn and cached_sklearn != sklearn.__version__:
+                            raise ValueError(
+                                f"scikit-learn version mismatch (cache={cached_sklearn}, runtime={sklearn.__version__})"
+                            )
+                        loaded_engine = cached_obj["engine"]
+                    else:
+                        loaded_engine = cached_obj
+
+                    if not hasattr(loaded_engine, "analyze_single_feedback"):
+                        raise ValueError("Invalid cached NLP engine object")
+
+                    _nlp_engine = loaded_engine
+                    _engine_state = "ready"
+                    logger.info("NLP Engine cache loaded successfully!")
+                    return _nlp_engine
+                except Exception as cache_err:
+                    logger.warning(
+                        "Incompatible or unreadable Joblib cache (%s); removing stale cache and retraining.",
+                        cache_err,
+                    )
+                    try:
+                        os.remove(CACHE_PATH)
+                    except OSError:
+                        pass
+
+            os.makedirs(DATA_DIR, exist_ok=True)
+            if not os.path.exists(DATASET_PATH):
+                df_init = generate_dataset(620)
+                df_init.to_csv(DATASET_PATH, index=False)
+
+            logger.info("Initializing Student Feedback NLP Engine from dataset (Emotion + Topic Models)...")
+            trained_engine = StudentFeedbackNLPEngine(DATASET_PATH)
+            _nlp_engine = trained_engine
+            _engine_state = "ready"
+            logger.info("NLP Engine ready!")
+
+            try:
+                joblib.dump(
+                    {
+                        "sklearn_version": sklearn.__version__,
+                        "numpy_version": np.__version__,
+                        "pandas_version": pd.__version__,
+                        "engine": trained_engine,
+                    },
+                    CACHE_PATH,
+                    compress=3,
+                )
+                logger.info("Saved compatible NLP Engine cache to %s", CACHE_PATH)
+            except Exception as save_err:
+                logger.warning("Could not persist NLP cache: %s", save_err)
+
+            return _nlp_engine
+        except Exception as exc:
+            _engine_state = "error"
+            _engine_error = str(exc)
+            logger.exception("NLP Engine initialization failed: %s", exc)
+            raise
+
+
+def start_engine_warmup(force_retry: bool = False) -> bool:
+    """Starts background NLP engine initialization once without spawning duplicate threads."""
+    global _engine_state
+    with _init_lock:
+        if _nlp_engine is not None:
+            return False
+        if _engine_state == "initializing":
+            return False
+        if _engine_state == "error" and not force_retry:
+            return False
+        _engine_state = "initializing"
+        t = threading.Thread(target=_safe_warmup_worker, daemon=True)
+        t.start()
+        return True
+
+
+def _safe_warmup_worker():
+    try:
+        _load_or_train_engine()
+    except Exception:
+        # Error state and stack trace are already recorded in _load_or_train_engine
+        pass
 
 
 def get_engine() -> StudentFeedbackNLPEngine:
-    """Thread-safe singleton getter; loads pre-trained joblib cache in <0.3s for instant cloud startup."""
-    global _nlp_engine
-    if _nlp_engine is None:
-        with _engine_lock:
-            if _nlp_engine is None:
-                if os.path.exists(CACHE_PATH):
-                    try:
-                        print("Loading pre-trained Student Feedback NLP Engine cache...")
-                        _nlp_engine = joblib.load(CACHE_PATH)
-                        print("NLP Engine cache loaded!")
-                        return _nlp_engine
-                    except Exception as cache_err:
-                        print(f"Cache load skipped ({cache_err}); training from scratch...")
-                print("Initializing Student Feedback NLP Engine (Emotion + Topic Models)...")
-                _nlp_engine = StudentFeedbackNLPEngine(DATASET_PATH)
-                try:
-                    joblib.dump(_nlp_engine, CACHE_PATH, compress=3)
-                except Exception:
-                    pass
-                print("NLP Engine ready!")
-    return _nlp_engine
+    """Thread-safe singleton getter; retries automatically if a previous attempt errored."""
+    if _nlp_engine is not None:
+        return _nlp_engine
+    return _load_or_train_engine()
 
 
-# Warm up the NLP engine in a background daemon thread so Gunicorn binds 0.0.0.0:$PORT in <1 second on Render
-threading.Thread(target=get_engine, daemon=True).start()
+# Warm up the NLP engine in a single background daemon thread so Gunicorn binds $PORT immediately
+start_engine_warmup()
 
 
 @app.route("/")
@@ -102,18 +198,59 @@ def serve_index():
 
 @app.route("/api/health", methods=["GET"])
 def health_check():
-    eng = get_engine()
+    """Lightweight liveness probe; NEVER blocks on NLP model loading."""
+    is_ready = _nlp_engine is not None and _engine_state == "ready"
+    msg = (
+        "NLP engine is ready"
+        if is_ready
+        else "NLP engine initialization failed; retry via /api/ready"
+        if _engine_state == "error"
+        else "NLP engine is initializing"
+    )
     return jsonify({
         "status": "ok",
-        "dataset_records": len(eng.df),
-        "emotions": eng.emotions,
-        "topics": eng.topics,
-    })
+        "backend": "online",
+        "engine_ready": is_ready,
+        "engine_state": _engine_state,
+        "message": msg,
+    }), 200
+
+
+@app.route("/api/ready", methods=["GET", "POST"])
+def readiness_check():
+    """Readiness probe reporting whether the NLP engine has finished loading/training."""
+    if request.method == "POST" and _engine_state == "error":
+        start_engine_warmup(force_retry=True)
+
+    if _nlp_engine is not None and _engine_state == "ready":
+        return jsonify({
+            "status": "ready",
+            "engine_ready": True,
+            "engine_state": "ready",
+            "dataset_records": len(_nlp_engine.df),
+            "emotions": _nlp_engine.emotions,
+            "topics": _nlp_engine.topics,
+        }), 200
+
+    if _engine_state == "idle":
+        start_engine_warmup()
+
+    return jsonify({
+        "status": _engine_state,
+        "engine_ready": False,
+        "engine_state": _engine_state,
+        "message": "NLP engine initialization failed; retry triggered"
+        if _engine_state == "error"
+        else "NLP engine is still initializing",
+    }), 503
 
 
 @app.route("/api/dashboard", methods=["GET"])
 def get_dashboard():
-    eng = get_engine()
+    try:
+        eng = get_engine()
+    except Exception:
+        return jsonify({"error": "NLP engine unavailable. Please retry in a few seconds."}), 503
     course_filter = request.args.get("course", "ALL")
     data = eng.get_dashboard_analytics(course_filter=course_filter)
     return jsonify(data)
@@ -121,7 +258,10 @@ def get_dashboard():
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze_feedback():
-    eng = get_engine()
+    try:
+        eng = get_engine()
+    except Exception:
+        return jsonify({"error": "NLP engine unavailable. Please retry in a few seconds."}), 503
     payload = request.get_json(silent=True) or {}
     text = payload.get("text", "").strip()
     if not text:
@@ -132,7 +272,10 @@ def analyze_feedback():
 
 @app.route("/api/topics", methods=["GET"])
 def get_topics_comparison():
-    eng = get_engine()
+    try:
+        eng = get_engine()
+    except Exception:
+        return jsonify({"error": "NLP engine unavailable. Please retry in a few seconds."}), 503
     return jsonify({
         "topic_models": eng.topic_comparison_data,
         "document_clusters_2d": eng.document_embeddings_2d,
@@ -143,7 +286,10 @@ def get_topics_comparison():
 
 @app.route("/api/models", methods=["GET"])
 def get_model_benchmarks():
-    eng = get_engine()
+    try:
+        eng = get_engine()
+    except Exception:
+        return jsonify({"error": "NLP engine unavailable. Please retry in a few seconds."}), 503
     return jsonify(eng.model_metrics)
 
 

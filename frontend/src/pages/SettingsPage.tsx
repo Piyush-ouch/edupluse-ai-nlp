@@ -15,7 +15,7 @@ import type { HealthResponse } from '../types/nlp';
 interface SettingsPageProps {
   health: HealthResponse | null;
   backendConnected: boolean;
-  onRefreshHealth: () => Promise<void>;
+  onRefreshHealth: () => Promise<any>;
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({
@@ -114,7 +114,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               Active NLP Taxonomies
             </div>
             <div className="text-sm font-bold text-white mt-2">
-              {health?.emotions.length ?? 6} Emotions &times; {health?.topics.length ?? 6} Topics
+              {health?.emotions?.length ?? 6} Emotions &times; {health?.topics?.length ?? 6} Topics
             </div>
             <div className="text-xs text-[#94A3B8] mt-1">
               Zero dummy data &bull; 100% live model inference

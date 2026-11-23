@@ -65,9 +65,22 @@ export const App: React.FC = () => {
     try {
       const h = await nlpApi.checkHealth();
       setHealth(h);
-      setBackendConnected(true);
+      if (h.engine_ready) {
+        const r = await nlpApi.checkReady();
+        setHealth((prev) => ({
+          ...h,
+          dataset_records: r.dataset_records ?? prev?.dataset_records,
+          emotions: r.emotions ?? prev?.emotions,
+          topics: r.topics ?? prev?.topics,
+        }));
+        setBackendConnected(true);
+        return true;
+      }
+      setBackendConnected(false);
+      return false;
     } catch {
       setBackendConnected(false);
+      return false;
     }
   }, []);
 
@@ -141,32 +154,40 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Initial Bootstrap: check health first (with retry for cloud cold starts), then load analytics
+  // Initial Bootstrap: verify /api/health (liveness) & poll /api/ready (NLP readiness) before loading analytics
   useEffect(() => {
     let cancelled = false;
     const bootstrap = async () => {
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 8; attempt++) {
         if (cancelled) return;
         try {
           const h = await nlpApi.checkHealth();
           if (cancelled) return;
           setHealth(h);
-          setBackendConnected(true);
-          handleAnalyze(SAMPLE_FEEDBACK_PRESETS[2].text);
-          loadDashboard('ALL');
-          loadTopics();
-          loadModels();
-          return;
+
+          if (h.engine_ready) {
+            const r = await nlpApi.checkReady();
+            if (cancelled) return;
+            setHealth({
+              ...h,
+              dataset_records: r.dataset_records,
+              emotions: r.emotions,
+              topics: r.topics,
+            });
+            setBackendConnected(true);
+            setAnalyzerError(null);
+            handleAnalyze(SAMPLE_FEEDBACK_PRESETS[2].text);
+            loadDashboard('ALL');
+            loadTopics();
+            loadModels();
+            return;
+          }
+          setBackendConnected(false);
+          setAnalyzerError('NLP engine is initializing on the server. Retrying automatically...');
         } catch {
           setBackendConnected(false);
-          if (attempt < 2) {
-            await new Promise((r) => setTimeout(r, 3000));
-          }
         }
-      }
-      // Fallback attempt if health timed out
-      if (!cancelled) {
-        handleAnalyze(SAMPLE_FEEDBACK_PRESETS[2].text);
+        await new Promise((r) => setTimeout(r, 3000));
       }
     };
     bootstrap();

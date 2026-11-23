@@ -18,9 +18,23 @@ export type TopicName =
 
 export interface HealthResponse {
   status: string;
-  dataset_records: number;
-  emotions: string[];
-  topics: string[];
+  backend?: string;
+  engine_ready?: boolean;
+  engine_state?: string;
+  message?: string;
+  dataset_records?: number;
+  emotions?: string[];
+  topics?: string[];
+}
+
+export interface ReadyResponse {
+  status: string;
+  engine_ready: boolean;
+  engine_state: string;
+  dataset_records?: number;
+  emotions?: string[];
+  topics?: string[];
+  message?: string;
 }
 
 export interface PreprocessingDetails {
