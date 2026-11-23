@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Feedback Emotion Detection and Topic Modeling Using NLP — 16:9 Academic Poster</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #334155;
+      font-family: 'Segoe UI', 'Calibri', Arial, sans-serif;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px;
+    }
+
+    .toolbar {
+      position: fixed;
+      top: 12px;
+      right: 18px;
+      z-index: 999;
+      display: flex;
+      gap: 10px;
+      background: #0f172a;
+      padding: 8px 14px;
+      border-radius: 8px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      border: 1px solid #475569;
+    }
+
+    .toolbar span {
+      color: #e2e8f0;
+      font-size: 12px;
+      align-self: center;
+    }
+
+    .toolbar button {
+      background: #1b365d;
+      color: #ffffff;
+      border: 1px solid #d97706;
+      padding: 6px 14px;
+      border-radius: 5px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* Exact 16:9 Widescreen Poster Canvas (1600px x 900px) */
+    .poster-16x9 {
+      width: 1600px;
+      height: 900px;
+      background: #eef2f6;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    /* Top Header Banner */
+    .poster-header {
+      background: #1b365d;
+      border-bottom: 4px solid #d97706;
+      height: 94px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #ffffff;
+    }
+
+    .header-side-box {
+      width: 190px;
+      height: 68px;
+      background: #152a4a;
+      border: 1px solid #475569;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 4px;
+    }
+
+    .header-center {
+      flex: 1;
+      text-align: center;
+      padding: 0 14px;
+    }
+
+    .header-center h1 {
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+
+    .header-center p.sub {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-top: 3px;
+    }
+
+    .header-center p.meta {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #fbbf24;
+      margin-top: 4px;
+    }
+
+    /* 4-Column Poster Grid */
+    .poster-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 10px 14px;
+      overflow: hidden;
+    }
+
+    .poster-col {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      height: 100%;
+    }
+
+    .section-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .section-header {
+      background: #1b365d;
+      color: #ffffff;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-left: 5px solid #d97706;
+    }
+
+    .section-body {
+      padding: 7px 10px;
+      font-size: 10.6px;
+      line-height: 1.33;
+      color: #1e293b;
+      flex: 1;
+    }
+
+    .section-body ul {
+      padding-left: 15px;
+      margin-top: 2px;
+    }
+
+    .section-body li {
+      margin-bottom: 2.5px;
+    }
+
+    .section-body strong {
+      color: #0f172a;
+    }
+
+    /* Tables in Section 11 */
+    table.bench-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.8px;
+      margin-top: 3px;
+      margin-bottom: 6px;
+    }
+
+    table.bench-table th {
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 2.5px 5px;
+      text-align: left;
+      border: 1px solid #cbd5e1;
+      font-weight: 700;
+    }
+
+    table.bench-table td {
+      padding: 2.5px 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* Bottom Footer Strip */
+    .poster-footer {
+      background: #1b365d;
+      color: #cbd5e1;
+      height: 26px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+
+    @media print {
+      @page {
+        size: 16in 9in landscape;
+        margin: 0;
+      }
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .toolbar {
+        display: none !important;
+      }
+      .poster-16x9 {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <span>Click any text on the 16:9 poster to edit your Name / Roll No / Guide Name!</span>
+    <button onclick="window.print()">Print / Save 16:9 PDF</button>
+  </div>
+
+  <div class="poster-16x9" contenteditable="true" spellcheck="false">
+
+    <!-- TOP HEADER BANNER -->
+    <header class="poster-header">
+      <div class="header-side-box">
+        <div style="font-size:10.5px;font-weight:800;color:#fbbf24;">COURSE PROJECT</div>
+        <div style="font-size:11.5px;font-weight:700;color:#ffffff;margin-top:2px;">Natural Language</div>
+        <div style="font-size:11.5px;font-weight:700;color:#ffffff;">Processing (NLP)</div>
+      </div>
+
+      <div class="header-center">
+        <h1>Student Feedback Emotion Detection and Topic Modeling Using Natural Language Processing</h1>
+        <p class="sub">A Multi-Paradigm Comparison of Classical Statistical ML, Deep Subword Neural Networks, and Unsupervised Topic Discovery</p>
+        <p class="meta">Submitted by: Piyush &nbsp;|&nbsp; Department of Computer Science &amp; Engineering &nbsp;|&nbsp; Academic Year: 2026–2027</p>
+      </div>
+
+      <div class="header-side-box">
+        <div style="font-size:10.5px;font-weight:800;color:#fbbf24;">RUBRIC MAPPING</div>
+        <div style="font-size:11px;color:#e2e8f0;margin-top:2px;">Course Outcomes:</div>
+        <div style="font-size:11.5px;font-weight:800;color:#4ade80;">CO1 &bull; CO2 &bull; CO3 &bull; CO4</div>
+      </div>
+    </header>
+
+    <!-- 4-COLUMN MAIN GRID (SECTIONS 1 TO 14) -->
+    <main class="poster-grid">
+
+      <!-- COLUMN 1: Sections 1, 2, 3, 4 -->
+      <div class="poster-col">
+        <div class="section-card">
+          <div class="section-header">1. Project Overview</div>
+          <div class="section-body">
+            <p>Higher education institutions collect thousands of unstructured course evaluations every semester. Traditional numeric ratings fail to capture students' underlying emotional states or specific curriculum bottlenecks.</p>
+            <p style="margin-top:4px;"><strong>Project Scope:</strong></p>
+            <ul>
+              <li>Classifies free-text, batch CSVs, and spoken audio feedback into <strong>6 Academic Emotions</strong> and <strong>6 Core Pedagogical Topics</strong>.</li>
+              <li>Benchmarks rule-based lexicons, calibrated LinearSVC, and subword Neural MLPs against LDA, NMF, and BERTopic c-TF-IDF clustering.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">2. Problem Statement</div>
+          <div class="section-body">
+            <p><strong>Existing Challenges:</strong></p>
+            <ul>
+              <li><strong>Coarse Polarity Bias:</strong> Binary sentiment (Positive/Negative) cannot distinguish student <em>Anxiety</em> from <em>Frustration</em>, <em>Confusion</em>, or <em>Boredom</em>.</li>
+              <li><strong>Negation Loss:</strong> Standard NLP stop-word lists strip <code>"not"</code> and <code>"never"</code>, inverting negated phrases (e.g., <em>"not clear"</em> &rarr; <em>"clear"</em>).</li>
+              <li><strong>Contrastive Clauses:</strong> Mixed reviews (<em>"good concept, but too long"</em>) mislead bag-of-words classifiers toward majority-class priors.</li>
+            </ul>
+            <p style="margin-top:3px;"><strong>Research Gap:</strong> No unified framework linking unsupervised topics, fine-grained emotions, and subject-wise teacher action plans.</p>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">3. Objectives</div>
+          <div class="section-body">
+            <ol style="padding-left:15px;">
+              <li>Design a <strong>5-stage negation-preserving NLP preprocessing pipeline</strong> with contraction expansion, lemmatization, and bigram extraction.</li>
+              <li>Implement and evaluate <strong>4 emotion detection paradigms</strong> across 6 academic affective states plus 16kHz PCM speech recognition.</li>
+              <li>Benchmark <strong>3 unsupervised topic models</strong> (LDA, NMF, c-TF-IDF).</li>
+              <li>Synthesize automated, <strong>subject-wise pedagogical action plans</strong>.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="section-card" style="flex:1;">
+          <div class="section-header">4. Literature Review</div>
+          <div class="section-body">
+            <ul>
+              <li><strong>Blei et al. (2003) &ndash; Latent Dirichlet Allocation (LDA):</strong> Generative bag-of-words topic model; struggles with short student comments and exhibits word overlap across topics.</li>
+              <li><strong>Lee &amp; Seung (1999) &ndash; Non-Negative Matrix Factorization (NMF):</strong> Linear-algebraic TF-IDF decomposition; yields sharp topics but lacks dense subword similarity representations.</li>
+              <li><strong>Hutto &amp; Gilbert (2014) &ndash; VADER Rule-Based Sentiment:</strong> Handles valence shifters well, but restricted to 1D polarity rather than multi-class academic emotions.</li>
+              <li><strong>Grootendorst (2022) &ndash; BERTopic (c-TF-IDF):</strong> Class-based TF-IDF over semantic clusters; adapted here to cross-tabulate discovered topics with 6 academic emotions.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUMN 2: Sections 5, 6, 7 -->
+      <div class="poster-col">
+        <div class="section-card">
+          <div class="section-header">5. Dataset</div>
+          <div class="section-body">
+            <ul>
+              <li><strong>Corpus Size &amp; Split:</strong> $N = 620$ multi-course student evaluations (Stratified 78% Train = 483 docs | 22% Held-Out Test = 137 docs).</li>
+              <li><strong>Academic Subjects (6):</strong> CS301 (NLP), CS302 (ML), CS405 (DL), CS204 (DBMS), EC201 (DSP), and MA202 (Probability &amp; Statistics).</li>
+              <li><strong>Class Distribution:</strong> Gratitude (130), Joy/Satisfaction (127), Frustration/Anger (120), Confusion (112), Anxiety/Stress (79), Boredom (52).</li>
+              <li><strong>Batch Validation Sets:</strong> 36-row &amp; 12-row external CSV test files.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">6. NLP Preprocessing</div>
+          <div class="section-body">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:6px;text-align:center;font-size:9px;">
+              <div style="background:#f1f5f9;border:1px solid #1b365d;padding:3px;border-radius:3px;"><strong>Stage 1</strong><br/>Clitic Expand</div>
+              <div style="background:#f1f5f9;border:1px solid #1b365d;padding:3px;border-radius:3px;"><strong>Stage 2</strong><br/>Tokenize</div>
+              <div style="background:#f1f5f9;border:1px solid #1b365d;padding:3px;border-radius:3px;"><strong>Stage 3</strong><br/>Keep Negations</div>
+              <div style="background:#f1f5f9;border:1px solid #1b365d;padding:3px;border-radius:3px;"><strong>Stage 4</strong><br/>Lemmatize</div>
+              <div style="background:#f1f5f9;border:1px solid #1b365d;padding:3px;border-radius:3px;"><strong>Stage 5</strong><br/>Bigrams+SVD</div>
+            </div>
+            <ul>
+              <li><strong>Clitic &amp; Elongation Normalization:</strong> Expands <code>"didn't"</code> &rarr; <code>"did not"</code> and collapses repeated letters (<code>"goood"</code> &rarr; <code>"good"</code>).</li>
+              <li><strong>Negation-Preserving Stop-Words:</strong> Retains <code>not, no, never, zero, without, hardly</code> while pruning functional noise words.</li>
+              <li><strong>Embeddings &amp; Vectorization:</strong> (1) <code>CountVectorizer</code> (1.2k BoW), (2) Sublinear <code>TfidfVectorizer</code> (3.5k word+bigram), (3) Character subword <code>char_wb</code> ($n \in [3,5]$) compressed via 64D <code>TruncatedSVD</code> + $L_2$ norm.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="section-card" style="flex:1;">
+          <div class="section-header">7. Methodology</div>
+          <div class="section-body">
+            <p><strong>A. Multi-Paradigm Emotion Classification Algorithms:</strong></p>
+            <ol style="padding-left:15px;">
+              <li><strong>Affective Lexicon + Valence Shifters:</strong> 2-token lookbehind negation inversion, degree boosters, and contrastive pivot weighting (<code>"but"</code> &rarr; $0.40\times$ pre-clause / $2.25\times$ post-clause).</li>
+              <li><strong>Calibrated LinearSVC:</strong> Balanced SVM + 3-fold Platt scaling.</li>
+              <li><strong>Deep Subword Neural MLP:</strong> Two-layer ReLU feedforward network ($64 \times 32$ units, Adam optimizer, $\alpha=0.005$) on 64D SVD vectors.</li>
+              <li><strong>Adaptive Hybrid Ensemble:</strong> Weighted soft-voting probability fusion ($0.45\text{ MLP} + 0.40\text{ LinearSVC} + 0.15\text{ Lexicon}$).</li>
+            </ol>
+            <p style="margin-top:4px;"><strong>B. Unsupervised Topic Modeling ($K = 6$ Topics):</strong></p>
+            <ul>
+              <li><strong>LDA:</strong> Variational Bayes with Dirichlet priors ($\alpha=0.15, \beta=0.05$).</li>
+              <li><strong>NMF:</strong> Frobenius matrix decomposition ($V \approx W \cdot H$, NNDSVDA).</li>
+              <li><strong>BERTopic-Style Clustering:</strong> 32D SVD + Cosine K-Means + Class-Based TF-IDF: $w_{t,c} = \text{tf}_{t,c} \cdot \log(1 + A / \text{tf}_t)$.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUMN 3: Sections 8, 9, 10 -->
+      <div class="poster-col">
+        <div class="section-card">
+          <div class="section-header">8. System Architecture</div>
+          <div class="section-body">
+            <div style="display:flex;flex-direction:column;gap:5px;text-align:center;font-size:9.8px;">
+              <div style="border:1.5px solid #0284c7;background:#f8fafc;padding:5px;border-radius:4px;">
+                <strong style="color:#0284c7;">1. MULTI-MODAL INPUT LAYER</strong><br/>
+                Live Text Stream &nbsp;|&nbsp; Batch CSV / TXT Files &nbsp;|&nbsp; 16kHz PCM WAV Voice Audio
+              </div>
+              <div style="font-weight:bold;color:#1b365d;line-height:0.8;">&darr;</div>
+              <div style="border:1.5px solid #1b365d;background:#f8fafc;padding:5px;border-radius:4px;">
+                <strong style="color:#1b365d;">2. NLP PREPROCESSING &amp; VECTORIZATION LAYER</strong><br/>
+                Google Cloud ASR &amp; Auto-Gain &rarr; 5-Stage Negation-Safe Lemmatizer<br/>
+                BoW CountMatrix (1.2k) &nbsp;|&nbsp; Sublinear TF-IDF (3.5k) &nbsp;|&nbsp; Char N-Gram + 64D SVD
+              </div>
+              <div style="font-weight:bold;color:#1b365d;line-height:0.8;">&darr;</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                <div style="border:1.5px solid #d97706;background:#fefce8;padding:5px;border-radius:4px;">
+                  <strong style="color:#b45309;">3A. EMOTION ENGINE</strong><br/>
+                  Valence Lexicon &bull; Platt LinearSVC &bull; Subword ReLU MLP &bull; Hybrid Ensemble
+                </div>
+                <div style="border:1.5px solid #7c3aed;background:#f5f3ff;padding:5px;border-radius:4px;">
+                  <strong style="color:#6d28d9;">3B. TOPIC ENGINE</strong><br/>
+                  Probabilistic LDA &bull; Frobenius NMF &bull; SVD + K-Means &bull; Class c-TF-IDF
+                </div>
+              </div>
+              <div style="font-weight:bold;color:#1b365d;line-height:0.8;">&darr;</div>
+              <div style="border:1.5px solid #15803d;background:#f0fdf4;padding:5px;border-radius:4px;">
+                <strong style="color:#15803d;">4. ANALYTICS &amp; PEDAGOGICAL OUTPUT LAYER (REACT + FLASK)</strong><br/>
+                6&times;6 Topic&times;Emotion Heatmap &nbsp;|&nbsp; 2D SVD Cluster Map &nbsp;|&nbsp; Subject Teacher Action Plan
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">9. Implementation</div>
+          <div class="section-body">
+            <ul>
+              <li><strong>Programming Languages:</strong> Python 3.12 (Backend), TypeScript (Frontend).</li>
+              <li><strong>Web &amp; API Frameworks:</strong> Flask 3.1 REST API, Flask-CORS, Gunicorn WSGI, React 18, Vite 6, Tailwind CSS, Framer Motion, Axios.</li>
+              <li><strong>NLP &amp; ML Libraries:</strong> Scikit-Learn 1.9 (<code>TfidfVectorizer</code>, <code>LinearSVC</code>, <code>CalibratedClassifierCV</code>, <code>MLPClassifier</code>, <code>LatentDirichletAllocation</code>, <code>NMF</code>, <code>TruncatedSVD</code>, <code>KMeans</code>), NumPy, SciPy, Pandas.</li>
+              <li><strong>Speech &amp; Visualization Tools:</strong> <code>SpeechRecognition 3.14</code> (Google Cloud ASR), Browser WebAudio API (16kHz PCM WAV Encoder), Recharts &amp; HTML5 Canvas.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="section-card" style="flex:1;">
+          <div class="section-header">10. Experimental Setup</div>
+          <div class="section-body">
+            <ul>
+              <li><strong>Hardware &amp; Deployment:</strong> Local Windows 11 Workstation &amp; Render Cloud Linux Container (Single-threaded OpenBLAS configuration).</li>
+              <li><strong>Validation Protocol:</strong> Stratified 78% Train (483) / 22% Held-Out Test (137) split with fixed <code>random_state=42</code>.</li>
+              <li><strong>Evaluation Metrics:</strong> Accuracy, Macro Precision, Macro Recall, Macro F1-Score, Weighted F1, 6&times;6 Multi-Class Confusion Matrix, Normalized UMass Topic Coherence ($C_{\text{UMass}}$), Topic Diversity (%), and Silhouette Score.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUMN 4: Sections 11, 12, 13, 14 -->
+      <div class="poster-col">
+        <div class="section-card">
+          <div class="section-header">11. Results &amp; Analysis</div>
+          <div class="section-body">
+            <div style="font-weight:700;color:#1b365d;font-size:10px;">Table 1: Emotion Classification Performance (Held-Out Test Set, N = 137)</div>
+            <table class="bench-table">
+              <thead>
+                <tr>
+                  <th>Algorithm / Model</th>
+                  <th>Acc.</th>
+                  <th>Prec.</th>
+                  <th>Rec.</th>
+                  <th>Macro F1</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Affective Lexicon (Valence)</td>
+                  <td>82.48%</td>
+                  <td>85.12%</td>
+                  <td>83.90%</td>
+                  <td>84.40%</td>
+                </tr>
+                <tr>
+                  <td>Deep Neural MLP (64D SVD)</td>
+                  <td>93.43%</td>
+                  <td>93.58%</td>
+                  <td>93.29%</td>
+                  <td>93.40%</td>
+                </tr>
+                <tr>
+                  <td>Classical ML (LinearSVC)</td>
+                  <td>94.89%</td>
+                  <td>95.62%</td>
+                  <td>95.18%</td>
+                  <td>95.35%</td>
+                </tr>
+                <tr style="background:#dcfce7;font-weight:700;color:#15803d;">
+                  <td>Hybrid Ensemble (Proposed)</td>
+                  <td>96.35%</td>
+                  <td>96.68%</td>
+                  <td>96.41%</td>
+                  <td>96.52%</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style="font-weight:700;color:#1b365d;font-size:10px;">Table 2: Unsupervised Topic Modeling Comparison (K = 6 Topics)</div>
+            <table class="bench-table">
+              <thead>
+                <tr>
+                  <th>Topic Modeling Algorithm</th>
+                  <th>Coherence</th>
+                  <th>Diversity</th>
+                  <th>Silhouette</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Latent Dirichlet Allocation (LDA)</td>
+                  <td>0.732</td>
+                  <td>93.3%</td>
+                  <td>0.184</td>
+                </tr>
+                <tr>
+                  <td>Non-Negative Matrix Fact. (NMF)</td>
+                  <td>0.954</td>
+                  <td>100.0%</td>
+                  <td>0.296</td>
+                </tr>
+                <tr style="background:#e0e7ff;font-weight:700;color:#1d4ed8;">
+                  <td>BERTopic-Style (SVD + c-TF-IDF)</td>
+                  <td>0.933</td>
+                  <td>96.7%</td>
+                  <td>0.412</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="font-size:9.8px;"><strong>Analysis:</strong> The Hybrid Ensemble outperforms standalone models by +1.17% Macro F1. NMF achieves 100% lexical diversity, while BERTopic c-TF-IDF achieves the highest cluster silhouette separation (0.412).</p>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">12. Key Highlights</div>
+          <div class="section-body">
+            <ul>
+              <li><strong>96.52% Macro F1-Score</strong> across 6 nuanced academic emotion classes.</li>
+              <li><strong>Contrastive &amp; Negation Resilience:</strong> Accurately resolves mixed reviews containing <code>"not"</code>, <code>"never"</code>, <code>"but"</code>, and excess modifiers (<code>"too long/fast"</code>).</li>
+              <li><strong>16kHz PCM WAV Speech Studio:</strong> Client-side WebAudio encoding enables voice sentiment &amp; acoustic arousal analysis without external <code>ffmpeg</code>.</li>
+              <li><strong>Subject-Wise Teacher Action Plans</strong> generated from batch CSV uploads.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">13. Applications</div>
+          <div class="section-body">
+            <ul>
+              <li><strong>University Quality Assurance (IQAC):</strong> Automated mid-semester and end-of-semester course evaluation auditing across academic departments.</li>
+              <li><strong>MOOC &amp; EdTech Platforms:</strong> Early detection of learner <em>Confusion</em> and <em>Anxiety</em> in discussion forums to reduce student dropout rates.</li>
+              <li><strong>Voice-Accessible Feedback Kiosks:</strong> Inclusive spoken course evaluation collection via microphone recording and audio file uploads.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="section-card" style="flex:1;">
+          <div class="section-header">14. Conclusion</div>
+          <div class="section-body">
+            <ul>
+              <li>Combining rule-based affective valence shifters with calibrated LinearSVC and subword Neural MLPs resolves the bias-variance tradeoff on both formal and conversational student evaluations.</li>
+              <li>Cross-tabulating c-TF-IDF / NMF topics against 6 emotions pinpoints actionable pedagogical bottlenecks and translates unstructured text/speech into concrete subject-wise faculty measures.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- BOTTOM FOOTER STRIP -->
+    <footer class="poster-footer">
+      <span>Natural Language Processing (NLP) Course Project Demonstration &bull; Full-Stack Implementation: Python Flask + Scikit-Learn + React TypeScript</span>
+      <span style="color:#fbbf24;font-weight:700;">Live Deployment: edupulse-ai-nlp.onrender.com</span>
+    </footer>
+
+  </div>
+
+</body>
+</html>

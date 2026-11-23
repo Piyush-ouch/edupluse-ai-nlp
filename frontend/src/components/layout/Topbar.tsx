@@ -118,7 +118,13 @@ export const Topbar: React.FC<TopbarProps> = ({
           ) : (
             <AlertCircle className="w-3.5 h-3.5 text-[#EF4444]" />
           )}
-          <span>{backendConnected ? 'API 127.0.0.1:5000' : 'API Offline'}</span>
+          <span>
+            {backendConnected
+              ? window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'API 127.0.0.1:5000'
+                : 'Cloud API Online'
+              : 'API Offline'}
+          </span>
         </div>
 
         <button

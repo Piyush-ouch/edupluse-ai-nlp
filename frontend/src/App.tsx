@@ -87,9 +87,13 @@ export const App: React.FC = () => {
         setBackendConnected(true);
       } catch (err: any) {
         setBackendConnected(false);
+        const hostLabel =
+          window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://127.0.0.1:5000 (Make sure python backend/app.py is running)'
+            : `${window.location.origin} (Cloud server may be waking up — click Refresh in a few seconds)`;
         setAnalyzerError(
           err?.response?.data?.error ||
-            'Could not reach Flask NLP API at http://127.0.0.1:5000. Make sure python backend/app.py is running.'
+            `Could not reach Flask NLP API at ${hostLabel}.`
         );
       } finally {
         setAnalyzerLoading(false);
@@ -137,13 +141,38 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Initial Bootstrap
+  // Initial Bootstrap: check health first (with retry for cloud cold starts), then load analytics
   useEffect(() => {
-    checkHealth();
-    handleAnalyze(SAMPLE_FEEDBACK_PRESETS[2].text);
-    loadDashboard('ALL');
-    loadTopics();
-    loadModels();
+    let cancelled = false;
+    const bootstrap = async () => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (cancelled) return;
+        try {
+          const h = await nlpApi.checkHealth();
+          if (cancelled) return;
+          setHealth(h);
+          setBackendConnected(true);
+          handleAnalyze(SAMPLE_FEEDBACK_PRESETS[2].text);
+          loadDashboard('ALL');
+          loadTopics();
+          loadModels();
+          return;
+        } catch {
+          setBackendConnected(false);
+          if (attempt < 2) {
+            await new Promise((r) => setTimeout(r, 3000));
+          }
+        }
+      }
+      // Fallback attempt if health timed out
+      if (!cancelled) {
+        handleAnalyze(SAMPLE_FEEDBACK_PRESETS[2].text);
+      }
+    };
+    bootstrap();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleCourseChange = (course: string) => {
