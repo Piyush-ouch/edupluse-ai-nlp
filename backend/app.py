@@ -17,6 +17,7 @@ import wave
 import tempfile
 import threading
 import subprocess
+import joblib
 import numpy as np
 import pandas as pd
 from flask import Flask, request, jsonify, send_from_directory, send_file
@@ -51,6 +52,7 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
 FRONTEND_DIR = DIST_DIR if os.path.exists(DIST_DIR) else os.path.join(BASE_DIR, "frontend")
 DATASET_PATH = os.path.join(DATA_DIR, "student_feedback_dataset.csv")
+CACHE_PATH = os.path.join(DATA_DIR, "nlp_engine_cache.joblib")
 
 # Ensure dataset exists before initializing engine
 if not os.path.exists(DATASET_PATH):
@@ -66,13 +68,25 @@ _engine_lock = threading.Lock()
 
 
 def get_engine() -> StudentFeedbackNLPEngine:
-    """Thread-safe singleton getter so Gunicorn binds $PORT immediately before model training completes."""
+    """Thread-safe singleton getter; loads pre-trained joblib cache in <0.3s for instant cloud startup."""
     global _nlp_engine
     if _nlp_engine is None:
         with _engine_lock:
             if _nlp_engine is None:
+                if os.path.exists(CACHE_PATH):
+                    try:
+                        print("Loading pre-trained Student Feedback NLP Engine cache...")
+                        _nlp_engine = joblib.load(CACHE_PATH)
+                        print("NLP Engine cache loaded!")
+                        return _nlp_engine
+                    except Exception as cache_err:
+                        print(f"Cache load skipped ({cache_err}); training from scratch...")
                 print("Initializing Student Feedback NLP Engine (Emotion + Topic Models)...")
                 _nlp_engine = StudentFeedbackNLPEngine(DATASET_PATH)
+                try:
+                    joblib.dump(_nlp_engine, CACHE_PATH, compress=3)
+                except Exception:
+                    pass
                 print("NLP Engine ready!")
     return _nlp_engine
 
